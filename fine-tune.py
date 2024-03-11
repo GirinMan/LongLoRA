@@ -48,6 +48,10 @@ class ModelArguments:
 class TrainingArguments(transformers.TrainingArguments):
     cache_dir: Optional[str] = field(default=None)
     optim: str = field(default="adamw_torch")
+    dataset_name: str = field(
+        default="togethercomputer/RedPajama-Data-1T-Sample",
+        metadata={"help": "Dataset to use for finetuning"},
+    )
     model_max_length: int = field(
         default=8192 * 4,
         metadata={"help": "Maximum sequence length. Sequences will be right padded (and possibly truncated)."},
@@ -137,6 +141,7 @@ def train():
         config=config,
         cache_dir=training_args.cache_dir,
         torch_dtype=torch.bfloat16,
+        low_cpu_mem_usage=True,
     )
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -166,8 +171,9 @@ def train():
     rank = int(os.environ.get('RANK', -1))
     if rank > 0:
         barrier()
-    dataset = load_dataset("togethercomputer/RedPajama-Data-1T-Sample", cache_dir=training_args.cache_dir)
-    dataset = dataset.map(partial(tokenize_fn,tokenizer),batched=True, num_proc=128, remove_columns=["text", "meta"])
+    #dataset = load_dataset(training_args.dataset_name, cache_dir=training_args.cache_dir)
+    dataset = load_dataset('json', data_files={'train': os.path.join(training_args.dataset_name, 'train.jsonl'), 'validation': os.path.join(training_args.dataset_name, 'valid.jsonl')})
+    dataset = dataset.map(partial(tokenize_fn,tokenizer),batched=True, num_proc=128, remove_columns=["text"])
 
     if rank == 0:
         barrier()
@@ -193,7 +199,10 @@ def train():
         )
         model = get_peft_model(model, config)
         # enable trainable params
-        [p.requires_grad_() for n, p in model.named_parameters() if any([k in n for k in training_args.trainable_params.split(",")])]
+        for n, p in model.named_parameters():
+            if any([k in n for k in training_args.trainable_params.split(",")]):
+                print(f"Training module {n}")
+                p.requires_grad_()
 
     model.config.use_cache = False         # required for gradient checkpointing
     model.enable_input_require_grads()     # required for gradient checkpointing
@@ -201,7 +210,7 @@ def train():
     trainer = Trainer(
         model=model, tokenizer=tokenizer, args=training_args,
         train_dataset=dataset["train"],
-        eval_dataset=None,
+        eval_dataset=dataset["validation"],
         data_collator=data_collator)
     trainer.add_callback(SavePeftModelCallback)
     trainer.train()

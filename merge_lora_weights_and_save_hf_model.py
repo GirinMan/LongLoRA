@@ -86,7 +86,7 @@ def main(args):
         cache_dir=args.cache_dir,
         model_max_length=args.context_size,
         padding_side="right",
-        use_fast=False,
+        use_fast=True,
     )
     special_tokens_dict = dict()
     if tokenizer.pad_token is None:
