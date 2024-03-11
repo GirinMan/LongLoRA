@@ -1,8 +1,10 @@
+mkdir outputs
+
 accelerate launch fine-tune.py  \
-        --model_name_or_path /data/workspace/girinman/ckpt/SOLAR-10.7B-dpo-v1-4k \
+        --model_name_or_path models/SOLAR-10.7B-dpo-v1 \
         --bf16 True \
-        --output_dir outputs/opal-longlora-v0.3.gl.co \
-        --dataset_name legal_data/v0.3.gl.co \
+        --output_dir outputs/opal-longlora-v0.3.GL.O \
+        --dataset_name legal_data/v0.3.GL.O \
         --model_max_length 4096 \
         --use_flash_attn True \
         --use_full_attn False \
