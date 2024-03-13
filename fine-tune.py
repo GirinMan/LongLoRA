@@ -173,7 +173,7 @@ def train():
         barrier()
     #dataset = load_dataset(training_args.dataset_name, cache_dir=training_args.cache_dir)
     dataset = load_dataset('json', data_files={'train': os.path.join(training_args.dataset_name, 'train.jsonl'), 'validation': os.path.join(training_args.dataset_name, 'valid.jsonl')})
-    dataset = dataset.map(partial(tokenize_fn,tokenizer),batched=True, num_proc=128, remove_columns=["text"])
+    dataset = dataset.map(partial(tokenize_fn,tokenizer),batched=True, num_proc=256, remove_columns=["text"])
 
     if rank == 0:
         barrier()
