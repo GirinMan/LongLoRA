@@ -77,8 +77,8 @@ def main(args):
         args.base_model,
         config=config,
         cache_dir=args.cache_dir,
-        torch_dtype=torch.float16,
-        device_map="auto",
+        torch_dtype="auto",
+        device_map={"":device},
     )
 
     tokenizer = transformers.AutoTokenizer.from_pretrained(
@@ -86,23 +86,23 @@ def main(args):
         cache_dir=args.cache_dir,
         model_max_length=args.context_size,
         padding_side="right",
-        use_fast=False,
+        use_fast=True,
     )
-    special_tokens_dict = dict()
-    if tokenizer.pad_token is None:
-        special_tokens_dict["pad_token"] = DEFAULT_PAD_TOKEN
-    if tokenizer.eos_token is None:
-        special_tokens_dict["eos_token"] = DEFAULT_EOS_TOKEN
-    if tokenizer.bos_token is None:
-        special_tokens_dict["bos_token"] = DEFAULT_BOS_TOKEN
-    if tokenizer.unk_token is None:
-        special_tokens_dict["unk_token"] = DEFAULT_UNK_TOKEN
-
-    smart_tokenizer_and_embedding_resize(
-        special_tokens_dict=special_tokens_dict,
-        tokenizer=tokenizer,
-        model=model,
-    )
+    # special_tokens_dict = dict()
+    # if tokenizer.pad_token is None:
+    #     special_tokens_dict["pad_token"] = DEFAULT_PAD_TOKEN
+    # if tokenizer.eos_token is None:
+    #     special_tokens_dict["eos_token"] = DEFAULT_EOS_TOKEN
+    # if tokenizer.bos_token is None:
+    #     special_tokens_dict["bos_token"] = DEFAULT_BOS_TOKEN
+    # if tokenizer.unk_token is None:
+    #     special_tokens_dict["unk_token"] = DEFAULT_UNK_TOKEN
+# 
+    # smart_tokenizer_and_embedding_resize(
+    #     special_tokens_dict=special_tokens_dict,
+    #     tokenizer=tokenizer,
+    #     model=model,
+    # )
 
     trainable_params = os.path.join(args.peft_model, "trainable_params.bin")
     if os.path.isfile(trainable_params):
@@ -110,11 +110,11 @@ def main(args):
     model = PeftModel.from_pretrained(
         model,
         args.peft_model,
-        device_map="auto",
-        torch_dtype=torch.float16,
+        device_map={"":device},
+        torch_dtype="auto",
     )
     model = model.merge_and_unload()
-    model.save_pretrained(args.save_path)
+    model.save_pretrained(args.save_path, safe_serialization=True)
     tokenizer.save_pretrained(args.save_path)
 
 if __name__ == "__main__":
